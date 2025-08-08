@@ -57,6 +57,7 @@ func main() {
 	// Protected routes
 	router.HandleFunc("/students", auth.JWTMiddleware(handlers.GetStudentsHandler)).Methods("GET", "OPTIONS")
 	router.HandleFunc("/students", auth.JWTMiddleware(handlers.CreateStudentHandler)).Methods("POST", "OPTIONS")
+	router.HandleFunc("/students", auth.JWTMiddleware(handlers.UpdateStudentHandler)).Methods("PUT", "OPTIONS")
 
 	// Server configuration
 	port := os.Getenv("PORT")

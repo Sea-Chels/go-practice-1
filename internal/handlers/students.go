@@ -116,3 +116,64 @@ func CreateStudentHandler(w http.ResponseWriter, r *http.Request) {
 
 	utils.SuccessResponse(w, student, http.StatusCreated)
 }
+
+func UpdateStudentHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		utils.ErrorResponse(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var student models.Student
+	if err := json.NewDecoder(r.Body).Decode(&student); err != nil {
+		utils.ErrorResponse(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate input
+	if student.ID <= 0 {
+		utils.ErrorResponse(w, "Invalid student ID", http.StatusBadRequest)
+		return
+	}
+	if err := utils.ValidateStudentName(student.Name); err != nil {
+		utils.ErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := utils.ValidateGrade(student.Grade); err != nil {
+		utils.ErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Check if student exists
+	var exists bool
+	err := database.DB.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM students WHERE id = $1 AND deleted_at IS NULL)
+	`, student.ID).Scan(&exists)
+	
+	if err != nil {
+		utils.ErrorResponse(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	
+	if !exists {
+		utils.ErrorResponse(w, "Student not found", http.StatusNotFound)
+		return
+	}
+
+	// Update the student
+	now := time.Now()
+	err = database.DB.QueryRow(`
+		UPDATE students 
+		SET name = $2, grade = $3, updated_at = $4
+		WHERE id = $1 AND deleted_at IS NULL
+		RETURNING id, name, grade, created_at, updated_at, deleted_at
+	`, student.ID, student.Name, student.Grade, now).Scan(
+		&student.ID, &student.Name, &student.Grade, 
+		&student.CreatedAt, &student.UpdatedAt, &student.DeletedAt)
+
+	if err != nil {
+		utils.ErrorResponse(w, "Failed to update student", http.StatusInternalServerError)
+		return
+	}
+
+	utils.SuccessResponse(w, student, http.StatusOK)
+}
