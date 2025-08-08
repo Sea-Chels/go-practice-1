@@ -32,6 +32,19 @@ db-reset: ## Reset database (removes all data)
 run: ## Run the application locally (requires local PostgreSQL)
 	go run cmd/api/main.go
 
+reset-db: ## Stop and restart the application (kills process on port 8080)
+	@echo "Stopping server on port 8080..."
+	@lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+	@echo "Starting server..."
+	@go run cmd/api/main.go
+
+restart: ## Just kill and restart without migrations
+	@echo "Killing process on port 8080..."
+	@lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+	@sleep 1
+	@echo "Starting server..."
+	@SKIP_MIGRATIONS=true go run cmd/api/main.go
+
 migrate-up: ## Run database migrations
 	@echo "Migrations are run automatically on startup"
 

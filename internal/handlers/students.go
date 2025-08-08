@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -16,17 +17,37 @@ func GetStudentsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := database.DB.Query(`
-		SELECT id, name, grade, created_at, updated_at, deleted_at 
-		FROM students 
-		WHERE deleted_at IS NULL
-		ORDER BY id
-	`)
+	// Check for include_deleted query parameter
+	includeDeleted := r.URL.Query().Get("include_deleted") == "true"
+	log.Printf("GetStudentsHandler: include_deleted=%v, URL=%s", includeDeleted, r.URL.String())
+	
+	var query string
+	if includeDeleted {
+		query = `
+			SELECT id, name, grade, created_at, updated_at, deleted_at 
+			FROM students 
+			ORDER BY id
+		`
+		log.Println("Including deleted students in query")
+	} else {
+		query = `
+			SELECT id, name, grade, created_at, updated_at, deleted_at 
+			FROM students 
+			WHERE deleted_at IS NULL
+			ORDER BY id
+		`
+		log.Println("Excluding deleted students from query")
+	}
+
+	rows, err := database.DB.Query(query)
 	if err != nil {
+		log.Printf("Database query error: %v", err)
 		utils.ErrorResponse(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
+	
+	log.Println("Query executed successfully")
 
 	var students []models.Student
 	for rows.Next() {
@@ -37,6 +58,7 @@ func GetStudentsHandler(w http.ResponseWriter, r *http.Request) {
 			utils.ErrorResponse(w, "Error scanning results", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("Student: ID=%d, Name=%s, DeletedAt=%v", student.ID, student.Name, student.DeletedAt)
 		students = append(students, student)
 	}
 
@@ -45,6 +67,8 @@ func GetStudentsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Total students found: %d", len(students))
+	
 	response := models.StudentsResponse{
 		Students: students,
 		Count:    len(students),

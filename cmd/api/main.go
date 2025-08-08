@@ -28,14 +28,18 @@ func main() {
 	}
 	defer database.CloseDB()
 
-	// Run migrations
-	if err := database.RunMigrations("migrations"); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
-	}
+	// Run migrations (unless skipped)
+	if os.Getenv("SKIP_MIGRATIONS") != "true" {
+		if err := database.RunMigrations("migrations"); err != nil {
+			log.Fatalf("Failed to run migrations: %v", err)
+		}
 
-	// Seed database
-	if err := database.SeedDatabase(); err != nil {
-		log.Fatalf("Failed to seed database: %v", err)
+		// Seed database
+		if err := database.SeedDatabase(); err != nil {
+			log.Fatalf("Failed to seed database: %v", err)
+		}
+	} else {
+		log.Println("Skipping migrations and seeding (SKIP_MIGRATIONS=true)")
 	}
 
 	// Setup routes

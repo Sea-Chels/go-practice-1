@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS teachers (
 );
 
 -- Create an index on email for faster lookups
-CREATE INDEX idx_teachers_email ON teachers(email);
+CREATE INDEX IF NOT EXISTS idx_teachers_email ON teachers(email);
 
 -- Create an index on deleted_at for soft delete queries
-CREATE INDEX idx_teachers_deleted_at ON teachers(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_teachers_deleted_at ON teachers(deleted_at);
