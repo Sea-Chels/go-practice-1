@@ -47,12 +47,12 @@ func main() {
 	router.Use(recoveryMiddleware)
 
 	// Public routes
-	router.HandleFunc("/health", handlers.HealthHandler)
-	router.HandleFunc("/auth/login", handlers.LoginHandler)
+	router.HandleFunc("/health", handlers.HealthHandler).Methods("GET", "OPTIONS")
+	router.HandleFunc("/auth/login", handlers.LoginHandler).Methods("POST", "OPTIONS")
 
 	// Protected routes
-	router.HandleFunc("/students", auth.JWTMiddleware(handlers.GetStudentsHandler)).Methods("GET")
-	router.HandleFunc("/students", auth.JWTMiddleware(handlers.CreateStudentHandler)).Methods("POST")
+	router.HandleFunc("/students", auth.JWTMiddleware(handlers.GetStudentsHandler)).Methods("GET", "OPTIONS")
+	router.HandleFunc("/students", auth.JWTMiddleware(handlers.CreateStudentHandler)).Methods("POST", "OPTIONS")
 
 	// Server configuration
 	port := os.Getenv("PORT")
@@ -95,12 +95,8 @@ func main() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
-		if allowedOrigins == "" {
-			allowedOrigins = "*"
-		}
-
-		w.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
+		// For development, allow all origins
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Max-Age", "86400")
