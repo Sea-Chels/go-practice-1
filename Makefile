@@ -22,6 +22,9 @@ docker-logs: ## View Docker container logs
 db-shell: ## Access PostgreSQL shell
 	docker exec -it go-practice-1-postgres-1 psql -U devuser -d school_db
 
+db-tables: ## List all tables in the database
+	docker exec go-practice-1-postgres-1 psql -U devuser -d school_db -c "\dt"
+
 db-reset: ## Reset database (removes all data)
 	docker-compose down -v
 	docker-compose up -d
@@ -31,6 +34,33 @@ run: ## Run the application locally (requires local PostgreSQL)
 
 migrate-up: ## Run database migrations
 	@echo "Migrations are run automatically on startup"
+
+migrate-create: ## Create a new migration file (usage: make migrate-create name=create_table_name)
+	@if [ -z "$(name)" ]; then \
+		echo "Error: Please provide a migration name. Usage: make migrate-create name=your_migration_name"; \
+		exit 1; \
+	fi; \
+	timestamp=$$(date +%Y%m%d%H%M%S); \
+	seq=$$(ls migrations/*.sql 2>/dev/null | wc -l | xargs); \
+	seq=$$(printf "%03d" $$(($$seq + 1))); \
+	filename="migrations/$${seq}_$(name).sql"; \
+	echo "-- Migration: $(name)" > $$filename; \
+	echo "-- Created at: $$(date)" >> $$filename; \
+	echo "" >> $$filename; \
+	echo "-- Write your SQL migration here" >> $$filename; \
+	echo "-- Example:" >> $$filename; \
+	echo "-- CREATE TABLE example (" >> $$filename; \
+	echo "--     id SERIAL PRIMARY KEY," >> $$filename; \
+	echo "--     name VARCHAR(255) NOT NULL," >> $$filename; \
+	echo "--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" >> $$filename; \
+	echo "-- );" >> $$filename; \
+	echo "" >> $$filename; \
+	echo "Created migration file: $$filename"; \
+	echo "Edit this file with your SQL commands"
+
+migrate-run: ## Run pending migrations while the server is running
+	@echo "Running migrations..."; \
+	go run cmd/migrate/main.go
 
 seed: ## Seed the database
 	@echo "Database is seeded automatically on startup"
