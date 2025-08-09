@@ -33,11 +33,11 @@ func JWTMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Add claims to request context
+		// Add claims to request context while preserving existing context values
 		ctx := context.WithValue(r.Context(), UserContextKey, claims)
-		r = r.WithContext(ctx)
-
-		next(w, r)
+		
+		// Call the next handler with the updated request
+		next(w, r.WithContext(ctx))
 	}
 }
 

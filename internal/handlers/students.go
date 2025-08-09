@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Sea-Chels/go-practice-1/internal/database"
 	"github.com/Sea-Chels/go-practice-1/internal/models"
 	"github.com/Sea-Chels/go-practice-1/internal/utils"
+	"github.com/gorilla/mux"
 )
 
 func GetStudentsHandler(w http.ResponseWriter, r *http.Request) {
@@ -176,4 +179,58 @@ func UpdateStudentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.SuccessResponse(w, student, http.StatusOK)
+}
+
+func DeleteStudentHandler(w http.ResponseWriter, r *http.Request) {
+	
+	// Get ID from mux vars or URL path
+	vars := mux.Vars(r)
+	studentID := vars["id"]
+	
+	// Fallback: extract from URL path if mux vars are empty
+	if studentID == "" {
+		parts := strings.Split(r.URL.Path, "/")
+		if len(parts) >= 3 && parts[1] == "students" {
+			studentID = parts[2]
+		}
+	}
+	
+	// Validate input
+	studentIDInt, err := strconv.Atoi(studentID)
+	if err != nil || studentIDInt <= 0 {
+		utils.ErrorResponse(w, "Invalid student ID", http.StatusBadRequest)
+		return
+	}
+	
+	// Check if student exists
+	var exists bool
+	err = database.DB.QueryRow(`
+		SELECT EXISTS(SELECT 1 FROM students WHERE id = $1 AND deleted_at IS NULL)
+	`, studentIDInt).Scan(&exists)
+	
+	if err != nil {
+		utils.ErrorResponse(w, "Not found", http.StatusNotFound)
+		return
+	}
+	
+	if !exists {
+		utils.ErrorResponse(w, "Student not found", http.StatusNotFound)
+		return
+	}
+
+	// Soft delete the student
+	now := time.Now()
+	_, err = database.DB.Exec(`
+		UPDATE students 
+		SET deleted_at = $2, updated_at = $3
+		WHERE id = $1 AND deleted_at IS NULL
+	`, studentIDInt, now, now)
+
+	if err != nil {
+		utils.ErrorResponse(w, "Not found", http.StatusNotFound)
+		log.Printf("DeleteStudentHandler: error=%v", err)
+		return
+	}
+
+	utils.SuccessResponse(w, nil, http.StatusNoContent)
 }

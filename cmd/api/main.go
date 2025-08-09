@@ -58,6 +58,7 @@ func main() {
 	router.HandleFunc("/students", auth.JWTMiddleware(handlers.GetStudentsHandler)).Methods("GET", "OPTIONS")
 	router.HandleFunc("/students", auth.JWTMiddleware(handlers.CreateStudentHandler)).Methods("POST", "OPTIONS")
 	router.HandleFunc("/students", auth.JWTMiddleware(handlers.UpdateStudentHandler)).Methods("PUT", "OPTIONS")
+	router.HandleFunc("/students/{id}", auth.JWTMiddleware(handlers.DeleteStudentHandler)).Methods("DELETE", "OPTIONS")
 
 	// Server configuration
 	port := os.Getenv("PORT")
